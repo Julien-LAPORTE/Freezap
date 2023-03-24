@@ -2,18 +2,26 @@ package com.openclassrooms.freezap.Controllers;
 
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 
 import com.openclassrooms.freezap.R;
 import com.openclassrooms.freezap.Utils.MyAsyncTask;
+import com.openclassrooms.freezap.Utils.MyAsyncTaskLoader;
 import com.openclassrooms.freezap.Utils.MyHandlerThread;
 import com.openclassrooms.freezap.Utils.Utils;
 
-public class MainActivity extends AppCompatActivity implements MyAsyncTask.Listeners {
+public class MainActivity extends AppCompatActivity implements MyAsyncTask.Listeners,
+        LoaderManager.LoaderCallbacks<Long> {
+private static final int TASK_ID = 100;
 
     //FOR DESIGN
     private ProgressBar m_progressBar;
@@ -28,6 +36,8 @@ public class MainActivity extends AppCompatActivity implements MyAsyncTask.Liste
         m_progressBar = findViewById(R.id.activity_main_progress_bar);
         //Configure Handler Thread
         configureHandlerThread();
+        //Try to resume possible loading AsyncTask
+        resumeAsyncTaskLoaderIfPossible();
     }
 
     @Override
@@ -56,12 +66,15 @@ public class MainActivity extends AppCompatActivity implements MyAsyncTask.Liste
             case 50:
                 break;
             case 60: // CASE USER CLICKED ON BUTTON "EXECUTE ASYNCTASK"
-                this.startAsyncTask();
+                startAsyncTask();
                 break;
             case 70:
+                startAsyncTaskLoader();
                 break;
         }
     }
+
+
 
     // 3 - We create and start our AsyncTask
     private void startAsyncTask() {
@@ -100,4 +113,36 @@ public class MainActivity extends AppCompatActivity implements MyAsyncTask.Liste
     private void updateUIBeforeTask() {
         m_progressBar.setVisibility(View.VISIBLE);
     }
+
+    // 7 - Resume previous AsyncTaskLoader if still running
+    private void resumeAsyncTaskLoaderIfPossible(){
+        if (getSupportLoaderManager().getLoader(TASK_ID) != null && getSupportLoaderManager()
+                .getLoader(TASK_ID).isStarted()) {
+            getSupportLoaderManager().initLoader(TASK_ID, null, this);
+            updateUIBeforeTask();
+        }
+    }
+    private void startAsyncTaskLoader() {
+        getSupportLoaderManager().restartLoader(TASK_ID, null, this);
+    }
+    // 2 - Implements callback methods
+    @Override
+    public Loader<Long> onCreateLoader(int id, Bundle args) {
+        Log.e("TAG", "On Create !");
+        updateUIBeforeTask();
+        return new MyAsyncTaskLoader(this); // 5 - Return a new AsyncTaskLoader
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Long> loader, Long data) {
+        Log.e("TAG", "On Finished !");
+        loader.stopLoading(); // 6 - Force loader to stop
+        updateUIAfterTask(data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Long> loader) {
+
+    }
+
 }
